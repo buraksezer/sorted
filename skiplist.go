@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package memdb provides a memory-backed implementation of the db.DB
-// interface.
-//
-// A MemDB's memory consumption increases monotonically, even if keys are
-// deleted or values are updated with shorter slices. Callers of the package
-// are responsible for explicitly compacting a MemDB into a separate DB
-// (whether in-memory or on-disk) when appropriate.
 package gsorted
 
 import (
@@ -18,15 +11,25 @@ import (
 	"sync/atomic"
 )
 
-// maxHeight is the maximum height of a MemDB's skiplist.
+// This skiplist implementation is a slightly modified version of: https://github.com/golang/leveldb/blob/master/memdb/memdb.go
+//
+// skipList provides a memory-backed implementation of the db.DB
+// interface.
+//
+// A skipList's memory consumption increases monotonically, even if keys are
+// deleted or values are updated with shorter slices. Callers of the package
+// are responsible for explicitly compacting a skipList into a separate DB
+// (whether in-memory or on-disk) when appropriate.
+
+// maxHeight is the maximum height of a skipList's skiplist.
 const maxHeight = 12
 
-// A MemDB's skiplist consists of a number of nodes, and each node is
+// A skipList's skiplist consists of a number of nodes, and each node is
 // represented by a variable number of ints: a key-offset, a value-offset, and
 // between 1 and maxHeight next nodes. The key-offset and value-offset encode
-// the node's key/value pair and are offsets into a MemDB's kvData slice.
+// the node's key/value pair and are offsets into a skipList's kvData slice.
 // The remaining ints, for the next nodes in the skiplist's linked lists, are
-// offsets into a MemDB's nodeData slice.
+// offsets into a skipList's nodeData slice.
 //
 // The fXxx constants represent how to find the Xxx field of a node in the
 // nodeData. For example, given an int 30 representing a node, and given
@@ -52,7 +55,7 @@ const (
 	headNode = -fNxt
 )
 
-// A node's key-offset and value-offset fields are offsets into a MemDB's
+// A node's key-offset and value-offset fields are offsets into a skipList's
 // kvData slice that stores varint-prefixed strings: the node's key and value.
 // A negative offset means a zero-length string, whether explicitly set to
 // empty or implicitly set by deletion.
@@ -112,7 +115,7 @@ func (s *skipList) save(b []byte) (kvOffset int) {
 // findNode returns the first node n whose key is >= the given key (or nil if
 // there is no such node) and whether n's key equals key. The search is based
 // solely on the contents of a node's key. Whether or not that key was
-// previously deleted from the MemDB is not relevant.
+// previously deleted from the skipList is not relevant.
 //
 // If prev is non-nil, it also sets the first m.height elements of prev to the
 // preceding node at each height.
@@ -148,20 +151,6 @@ func (s *skipList) Get(key []byte) (value []byte, err error) {
 		return nil, ErrKeyNotFound
 	}
 	return s.load(vOff), nil
-}
-
-func (s *skipList) firstKey() []byte {
-	n, _ := s.findNode(nil, nil)
-	for n != zeroNode {
-		vOff := s.nodeData[n+fVal]
-		if vOff == kvOffsetDeletedNode {
-			n = s.nodeData[n+fNxt]
-			continue
-		}
-		break
-	}
-	kOff := s.nodeData[n+fKey]
-	return s.load(kOff)
 }
 
 func (s *skipList) Check(key []byte) bool {
@@ -248,16 +237,6 @@ func (s *skipList) Len() int {
 	return int(atomic.LoadInt64(&s.length))
 }
 
-// ApproximateMemoryUsage returns the approximate memory usage of the MemDB.
-func (s *skipList) ApproximateMemoryUsage() int {
-	return len(s.kvData)
-}
-
-// Empty returns whether the MemDB has no key/value pairs.
-func (s *skipList) Empty() bool {
-	return len(s.nodeData) == maxHeight
-}
-
 // NewIterator implements DB.NewIterator, as documented in the leveldb/db package.
 func (s *skipList) NewIterator() *Iterator {
 	n, _ := s.findNode(nil, nil)
@@ -275,8 +254,8 @@ func (s *skipList) NewIterator() *Iterator {
 	return t
 }
 
-// Iterator is a MemDB iterator that buffers upcoming results, so that it does
-// not have to acquire the MemDB's mutex on each Next call.
+// Iterator is a skipList iterator that buffers upcoming results, so that it does
+// not have to acquire the skipList's mutex on each Next call.
 type Iterator struct {
 	m *skipList
 	// restartNode is the node to start refilling the buffer from.
@@ -293,7 +272,7 @@ type Iterator struct {
 	buf [32][2][]byte
 }
 
-// fill fills the Iterator's buffer with key/value pairs from the MemDB.
+// fill fills the Iterator's buffer with key/value pairs from the skipList.
 //
 // Precondition: t.m.mutex is locked for reading.
 func (t *Iterator) fill() {
@@ -355,11 +334,11 @@ func (s *skipList) SubMap(fromKey, toKey []byte) *Iterator {
 		n = s.nodeData[n+fNxt]
 	}
 
-	limitNode, _ := s.findNode(toKey, nil)
+	l, _ := s.findNode(toKey, nil)
 	t := &Iterator{
 		m:           s,
 		restartNode: n,
-		limitNode:   limitNode,
+		limitNode:   l,
 	}
 	t.fill()
 	// The iterator is positioned at the first node >= key. The iterator API

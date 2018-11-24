@@ -74,7 +74,7 @@ func (m *SortedMap) Set(key, value []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Get the last value, storage only calls Put on the last created table.
+	// Get the last value, map only calls Put on the last created table.
 	s := m.skiplists[len(m.skiplists)-1]
 	return s.Set(key, value)
 }
@@ -160,7 +160,7 @@ func (m *SortedMap) Range(fn func(key, value []byte) bool) {
 	}
 }
 
-// Len returns the key cound in this storage.
+// Len returns the key count in this map.
 func (m *SortedMap) Len() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -226,25 +226,4 @@ func (m *SortedMap) HeadMap(toKey []byte, f func(key, value []byte) bool) {
 // TailMap returns a view of the portion of this map whose keys are greater than or equal to fromKey.
 func (m *SortedMap) TailMap(fromKey []byte, f func(key, value []byte) bool) {
 	m.SubMap(fromKey, nil, f)
-}
-
-// Returns the first (lowest) key currently in this map.
-func (m *SortedMap) FirstKey() []byte {
-	for {
-		select {
-		case <-time.After(10 * time.Millisecond):
-			m.mu.RLock()
-			// Wait for compaction.
-			if m.compacting {
-				m.mu.RUnlock()
-				continue
-			}
-			defer m.mu.RUnlock()
-			s := m.skiplists[0]
-			return s.firstKey()
-		case <-m.ctx.Done():
-			return nil
-		}
-	}
-
 }
