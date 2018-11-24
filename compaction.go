@@ -2,28 +2,26 @@ package gsorted
 
 import (
 	"log"
-	"sync/atomic"
 	"time"
 )
 
-func (o *SortedMap) compaction() {
-	defer o.wg.Done()
-	defer atomic.StoreInt32(&o.compacting, 0)
+func (m *SortedMap) compaction() {
+	defer m.wg.Done()
 
 	// Run immediately. The ticker will trigger that function
-	// every 100 milliseconds to prevent blocking the storage instance.
-	if done := o.compactSkipLists(); done {
+	// every 10 milliseconds to prevent blocking the SortedMap instance.
+	if done := m.compactSkipLists(); done {
 		// Fragmented skiplists are compactd. Quit.
 		return
 	}
 	for {
 		select {
-		case <-time.After(50 * time.Millisecond):
-			if done := o.compactSkipLists(); done {
+		case <-time.After(10 * time.Millisecond):
+			if done := m.compactSkipLists(); done {
 				// Fragmented skiplists are compactd. Quit.
 				return
 			}
-		case <-o.ctx.Done():
+		case <-m.ctx.Done():
 			return
 		}
 	}
@@ -33,6 +31,7 @@ func (m *SortedMap) compactSkipLists() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if len(m.skiplists) == 1 {
+		m.compacting = false
 		return true
 	}
 
@@ -40,10 +39,9 @@ func (m *SortedMap) compactSkipLists() bool {
 	fresh := m.skiplists[len(m.skiplists)-1]
 	for _, old := range m.skiplists[:len(m.skiplists)-1] {
 		if old.Len() == 0 {
-			// It will be removed by garbage collection.
+			// It will be removed by the garbage collector.
 			break
 		}
-		// Removing keys while iterating on map is totally safe in Go.
 		it := old.NewIterator()
 		for it.Next() {
 			key := it.Key()
@@ -52,8 +50,6 @@ func (m *SortedMap) compactSkipLists() bool {
 				log.Printf("[ERROR] Failed to compact skiplists: %v", err)
 				return false
 			}
-			// Dont check the returned val, it's useless because
-			// we are sure that the key is already there.
 			old.Delete(key)
 			total++
 			if total > 100000 {
@@ -71,5 +67,6 @@ func (m *SortedMap) compactSkipLists() bool {
 		tmp = append(tmp, t)
 	}
 	m.skiplists = tmp
+	m.compacting = false
 	return true
 }

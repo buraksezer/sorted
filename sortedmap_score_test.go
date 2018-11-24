@@ -134,3 +134,41 @@ func Test_SortedMapWithScoreRange(t *testing.T) {
 		return true
 	})
 }
+
+func Test_SortedMapWithScoreSubMap(t *testing.T) {
+	sm := NewSortedMapWithScore(0)
+	defer func() {
+		err := sm.Close()
+		if err != nil {
+			t.Fatalf("Failed to close storage: %v", err)
+		}
+	}()
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	keys := []string{}
+	check := make(map[int]struct{})
+	for i := 0; i < 100; i++ {
+		key := r.Int()
+		if _, ok := check[key]; ok {
+			// Find a new key.
+			i--
+			continue
+		}
+		err := sm.Set(bkey(key), bval(key), uint64(i))
+		if err != nil {
+			t.Fatalf("Expected nil. Got %v", err)
+		}
+		keys = append(keys, string(bkey(key)))
+		check[key] = struct{}{}
+	}
+
+	idx := 23
+	// Sorted by iteration order.
+	sm.SubMap(23, 45, func(key, value []byte) bool {
+		if keys[idx] != string(key) {
+			t.Fatalf("Expected %s. Got: %s for id: %d", keys[idx], string(key), idx)
+		}
+		idx++
+		return true
+	})
+}

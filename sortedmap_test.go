@@ -248,3 +248,91 @@ func Test_SortedMapComparator(t *testing.T) {
 		}
 	}
 }
+
+func Test_SortedMapSubMap(t *testing.T) {
+	m := NewSortedMap(0)
+	defer func() {
+		err := m.Close()
+		if err != nil {
+			t.Fatalf("Failed to close storage: %v", err)
+		}
+	}()
+
+	for i := 0; i < 100; i++ {
+		err := m.Set(bkey(i), bval(i))
+		if err != nil {
+			t.Fatalf("Expected nil. Got %v", err)
+		}
+	}
+
+	idx := 10
+	m.SubMap(bkey(10), bkey(20), func(key, value []byte) bool {
+		if !bytes.Equal(key, bkey(idx)) {
+			t.Fatalf("Expected key %s. Got: %s", bkey(idx), string(key))
+		}
+		if !bytes.Equal(value, bval(idx)) {
+			t.Fatalf("Expected key %s. Got: %s", bval(idx), string(value))
+		}
+		idx++
+		return true
+	})
+}
+
+func Test_SortedMapHeadMap(t *testing.T) {
+	m := NewSortedMap(0)
+	defer func() {
+		err := m.Close()
+		if err != nil {
+			t.Fatalf("Failed to close storage: %v", err)
+		}
+	}()
+
+	for i := 0; i < 100; i++ {
+		err := m.Set(bkey(i), bval(i))
+		if err != nil {
+			t.Fatalf("Expected nil. Got %v", err)
+		}
+	}
+
+	idx := 0
+	m.HeadMap(bkey(20), func(key, value []byte) bool {
+		if !bytes.Equal(key, bkey(idx)) {
+			t.Fatalf("Expected key %s. Got: %s", bkey(idx), string(key))
+		}
+		if !bytes.Equal(value, bval(idx)) {
+			t.Fatalf("Expected key %s. Got: %s", bval(idx), string(value))
+		}
+		idx++
+		return true
+	})
+}
+
+func Test_SortedMapTailMap(t *testing.T) {
+	m := NewSortedMap(0)
+	defer func() {
+		err := m.Close()
+		if err != nil {
+			t.Fatalf("Failed to close storage: %v", err)
+		}
+	}()
+
+	for i := 0; i < 100; i++ {
+		err := m.Set(bkey(i), bval(i))
+		if err != nil {
+			t.Fatalf("Expected nil. Got %v", err)
+		}
+	}
+
+	idx := 10
+	m.TailMap(bkey(10), func(key, value []byte) bool {
+		if !bytes.Equal(key, bkey(idx)) {
+			t.Fatalf("Expected key %s. Got: %s", bkey(idx), string(key))
+		}
+		if !bytes.Equal(value, bval(idx)) {
+			t.Fatalf("Expected key %s. Got: %s", bval(idx), string(value))
+		}
+		fmt.Println(string(key), string(value))
+		idx++
+		return true
+	})
+}

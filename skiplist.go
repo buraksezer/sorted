@@ -267,6 +267,9 @@ type Iterator struct {
 	m *skipList
 	// restartNode is the node to start refilling the buffer from.
 	restartNode int
+
+	limitNode int
+
 	// i0 is the current Iterator position with respect to buf. A value of -1
 	// means that the Iterator is at the start, end or both of the iteration.
 	// i1 is the number of buffered entries.
@@ -281,7 +284,7 @@ type Iterator struct {
 // Precondition: t.m.mutex is locked for reading.
 func (t *Iterator) fill() {
 	i, n := 0, t.restartNode
-	for i < len(t.buf) && n != zeroNode {
+	for i < len(t.buf) && n != zeroNode && n != t.limitNode {
 		if t.m.nodeData[n+fVal] != kvOffsetDeletedNode {
 			t.buf[i][fKey] = t.m.load(t.m.nodeData[n+fKey])
 			t.buf[i][fVal] = t.m.load(t.m.nodeData[n+fVal])
@@ -306,7 +309,7 @@ func (t *Iterator) Next() bool {
 	if t.i0 < t.i1 {
 		return true
 	}
-	if t.restartNode == zeroNode {
+	if t.restartNode == zeroNode || t.restartNode == t.limitNode {
 		t.i0 = -1
 		t.i1 = 0
 		return false
@@ -332,14 +335,17 @@ func (t *Iterator) Value() []byte {
 }
 
 // Find implements DB.Find, as documented in the leveldb/db package.
-func (s *skipList) Find(key []byte) *Iterator {
-	n, _ := s.findNode(key, nil)
+func (s *skipList) SubMap(fromKey, toKey []byte) *Iterator {
+	n, _ := s.findNode(fromKey, nil)
 	for n != zeroNode && s.nodeData[n+fVal] == kvOffsetDeletedNode {
 		n = s.nodeData[n+fNxt]
 	}
+
+	limitNode, _ := s.findNode(toKey, nil)
 	t := &Iterator{
 		m:           s,
 		restartNode: n,
+		limitNode:   limitNode,
 	}
 	t.fill()
 	// The iterator is positioned at the first node >= key. The iterator API
