@@ -149,6 +149,7 @@ func (m *SortedMap) Range(fn func(key, value []byte) bool) {
 
 	// Scan available tables by starting the last added table.
 	for i := len(m.skiplists) - 1; i >= 0; i-- {
+		// FIXME: Range should work with the first skiplist, only.
 		s := m.skiplists[i]
 		it := s.NewIterator()
 		for it.Next() {
@@ -225,4 +226,25 @@ func (m *SortedMap) HeadMap(toKey []byte, f func(key, value []byte) bool) {
 // TailMap returns a view of the portion of this map whose keys are greater than or equal to fromKey.
 func (m *SortedMap) TailMap(fromKey []byte, f func(key, value []byte) bool) {
 	m.SubMap(fromKey, nil, f)
+}
+
+// Returns the first (lowest) key currently in this map.
+func (m *SortedMap) FirstKey() []byte {
+	for {
+		select {
+		case <-time.After(10 * time.Millisecond):
+			m.mu.RLock()
+			// Wait for compaction.
+			if m.compacting {
+				m.mu.RUnlock()
+				continue
+			}
+			defer m.mu.RUnlock()
+			s := m.skiplists[0]
+			return s.firstKey()
+		case <-m.ctx.Done():
+			return nil
+		}
+	}
+
 }

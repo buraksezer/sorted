@@ -76,6 +76,16 @@ type skipList struct {
 	length  int64
 }
 
+func newSkipList() *skipList {
+	return &skipList{
+		height: 1,
+		kvData: make([]byte, 0, 4096),
+		// The first maxHeight values of nodeData are the next nodes after the
+		// head node at each possible height. Their initial value is zeroNode.
+		nodeData: make([]int, maxHeight, 256),
+	}
+}
+
 // load loads a []byte from m.kvData.
 func (s *skipList) load(kvOffset int) (b []byte) {
 	if kvOffset < 0 {
@@ -138,6 +148,20 @@ func (s *skipList) Get(key []byte) (value []byte, err error) {
 		return nil, ErrKeyNotFound
 	}
 	return s.load(vOff), nil
+}
+
+func (s *skipList) firstKey() []byte {
+	n, _ := s.findNode(nil, nil)
+	for n != zeroNode {
+		vOff := s.nodeData[n+fVal]
+		if vOff == kvOffsetDeletedNode {
+			n = s.nodeData[n+fNxt]
+			continue
+		}
+		break
+	}
+	kOff := s.nodeData[n+fKey]
+	return s.load(kOff)
 }
 
 func (s *skipList) Check(key []byte) bool {
@@ -220,6 +244,20 @@ func (s *skipList) Delete(key []byte) error {
 	return nil
 }
 
+func (s *skipList) Len() int {
+	return int(atomic.LoadInt64(&s.length))
+}
+
+// ApproximateMemoryUsage returns the approximate memory usage of the MemDB.
+func (s *skipList) ApproximateMemoryUsage() int {
+	return len(s.kvData)
+}
+
+// Empty returns whether the MemDB has no key/value pairs.
+func (s *skipList) Empty() bool {
+	return len(s.nodeData) == maxHeight
+}
+
 // NewIterator implements DB.NewIterator, as documented in the leveldb/db package.
 func (s *skipList) NewIterator() *Iterator {
 	n, _ := s.findNode(nil, nil)
@@ -235,30 +273,6 @@ func (s *skipList) NewIterator() *Iterator {
 	// requires that the caller the Next first, so we set t.i0 to -1.
 	t.i0 = -1
 	return t
-}
-
-func (s *skipList) Len() int {
-	return int(atomic.LoadInt64(&s.length))
-}
-
-// ApproximateMemoryUsage returns the approximate memory usage of the MemDB.
-func (s *skipList) ApproximateMemoryUsage() int {
-	return len(s.kvData)
-}
-
-// Empty returns whether the MemDB has no key/value pairs.
-func (s *skipList) Empty() bool {
-	return len(s.nodeData) == maxHeight
-}
-
-func newSkipList() *skipList {
-	return &skipList{
-		height: 1,
-		kvData: make([]byte, 0, 4096),
-		// The first maxHeight values of nodeData are the next nodes after the
-		// head node at each possible height. Their initial value is zeroNode.
-		nodeData: make([]int, maxHeight, 256),
-	}
 }
 
 // Iterator is a MemDB iterator that buffers upcoming results, so that it does

@@ -331,8 +331,32 @@ func Test_SortedMapTailMap(t *testing.T) {
 		if !bytes.Equal(value, bval(idx)) {
 			t.Fatalf("Expected key %s. Got: %s", bval(idx), string(value))
 		}
-		fmt.Println(string(key), string(value))
 		idx++
 		return true
 	})
+}
+
+func Test_SortedMapFirstKey(t *testing.T) {
+	m := NewSortedMap(0)
+	defer func() {
+		err := m.Close()
+		if err != nil {
+			t.Fatalf("Failed to close storage: %v", err)
+		}
+	}()
+
+	for i := 0; i < 2; i++ {
+		err := m.Set(bkey(i), bval(i))
+		if err != nil {
+			t.Fatalf("Expected nil. Got %v", err)
+		}
+	}
+	err := m.Delete(bkey(0))
+	if err != nil {
+		t.Fatalf("Expected nil. Got %v", err)
+	}
+
+	if !bytes.Equal(m.FirstKey(), bkey(1)) {
+		t.Fatalf("Expected %s. Got %s", string(bkey(1)), string(m.FirstKey()))
+	}
 }
