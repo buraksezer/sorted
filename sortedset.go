@@ -37,9 +37,9 @@ func (ss *SortedSet) Range(f func(key []byte) bool) {
 	// Scan available tables by starting the last added skiplist.
 	for i := len(ss.sm.skiplists) - 1; i >= 0; i-- {
 		s := ss.sm.skiplists[i]
-		it := s.NewIterator()
-		for it.Next() {
-			if !f(it.Key()) {
+		it := s.newIterator()
+		for it.next() {
+			if !f(it.key()) {
 				break
 			}
 		}

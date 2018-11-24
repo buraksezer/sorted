@@ -143,8 +143,8 @@ func (s *skipList) findNode(key []byte, prev *[maxHeight]int) (n int, exactMatch
 	return n, exactMatch
 }
 
-// Get implements DB.Get, as documented in the leveldb/db package.
-func (s *skipList) Get(key []byte) (value []byte, err error) {
+// get implements DB.get, as documented in the leveldb/db package.
+func (s *skipList) get(key []byte) (value []byte, err error) {
 	n, exactMatch := s.findNode(key, nil)
 	vOff := s.nodeData[n+fVal]
 	if !exactMatch || vOff == kvOffsetDeletedNode {
@@ -153,7 +153,7 @@ func (s *skipList) Get(key []byte) (value []byte, err error) {
 	return s.load(vOff), nil
 }
 
-func (s *skipList) Check(key []byte) bool {
+func (s *skipList) check(key []byte) bool {
 	n, exactMatch := s.findNode(key, nil)
 	vOff := s.nodeData[n+fVal]
 	if !exactMatch || vOff == kvOffsetDeletedNode {
@@ -162,8 +162,8 @@ func (s *skipList) Check(key []byte) bool {
 	return true
 }
 
-// Set implements DB.Set, as documented in the leveldb/db package.
-func (s *skipList) Set(key, value []byte) error {
+// set implements DB.set, as documented in the leveldb/db package.
+func (s *skipList) set(key, value []byte) error {
 	// Increase length to count items in the skiplist.
 	atomic.AddInt64(&s.length, 1)
 
@@ -218,8 +218,8 @@ func (s *skipList) valueLen(n int) int {
 	return j - i
 }
 
-// Delete implements DB.Delete, as documented in the leveldb/db package.
-func (s *skipList) Delete(key []byte) error {
+// delete implements DB.delete, as documented in the leveldb/db package.
+func (s *skipList) delete(key []byte) error {
 	n, exactMatch := s.findNode(key, nil)
 	if !exactMatch || s.nodeData[n+fVal] == kvOffsetDeletedNode {
 		return ErrKeyNotFound
@@ -233,17 +233,17 @@ func (s *skipList) Delete(key []byte) error {
 	return nil
 }
 
-func (s *skipList) Len() int {
+func (s *skipList) len() int {
 	return int(atomic.LoadInt64(&s.length))
 }
 
-// NewIterator implements DB.NewIterator, as documented in the leveldb/db package.
-func (s *skipList) NewIterator() *Iterator {
+// newIterator implements DB.newIterator, as documented in the leveldb/db package.
+func (s *skipList) newIterator() *iterator {
 	n, _ := s.findNode(nil, nil)
 	for n != zeroNode && s.nodeData[n+fVal] == kvOffsetDeletedNode {
 		n = s.nodeData[n+fNxt]
 	}
-	t := &Iterator{
+	t := &iterator{
 		m:           s,
 		restartNode: n,
 	}
@@ -254,9 +254,9 @@ func (s *skipList) NewIterator() *Iterator {
 	return t
 }
 
-// Iterator is a skipList iterator that buffers upcoming results, so that it does
+// iterator is a skipList iterator that buffers upcoming results, so that it does
 // not have to acquire the skipList's mutex on each Next call.
-type Iterator struct {
+type iterator struct {
 	m *skipList
 	// restartNode is the node to start refilling the buffer from.
 	restartNode int
@@ -275,7 +275,7 @@ type Iterator struct {
 // fill fills the Iterator's buffer with key/value pairs from the skipList.
 //
 // Precondition: t.m.mutex is locked for reading.
-func (t *Iterator) fill() {
+func (t *iterator) fill() {
 	i, n := 0, t.restartNode
 	for i < len(t.buf) && n != zeroNode && n != t.limitNode {
 		if t.m.nodeData[n+fVal] != kvOffsetDeletedNode {
@@ -296,8 +296,8 @@ func (t *Iterator) fill() {
 	t.restartNode = n
 }
 
-// Next implements Iterator.Next, as documented in the leveldb/db package.
-func (t *Iterator) Next() bool {
+// next implements Iterator.next, as documented in the leveldb/db package.
+func (t *iterator) next() bool {
 	t.i0++
 	if t.i0 < t.i1 {
 		return true
@@ -311,31 +311,30 @@ func (t *Iterator) Next() bool {
 	return true
 }
 
-// Key implements Iterator.Key, as documented in the leveldb/db package.
-func (t *Iterator) Key() []byte {
+// key implements Iterator.key, as documented in the leveldb/db package.
+func (t *iterator) key() []byte {
 	if t.i0 < 0 {
 		return nil
 	}
 	return t.buf[t.i0][fKey]
 }
 
-// Value implements Iterator.Value, as documented in the leveldb/db package.
-func (t *Iterator) Value() []byte {
+// value implements Iterator.value, as documented in the leveldb/db package.
+func (t *iterator) value() []byte {
 	if t.i0 < 0 {
 		return nil
 	}
 	return t.buf[t.i0][fVal]
 }
 
-// Find implements DB.Find, as documented in the leveldb/db package.
-func (s *skipList) SubMap(fromKey, toKey []byte) *Iterator {
+func (s *skipList) subMap(fromKey, toKey []byte) *iterator {
 	n, _ := s.findNode(fromKey, nil)
 	for n != zeroNode && s.nodeData[n+fVal] == kvOffsetDeletedNode {
 		n = s.nodeData[n+fNxt]
 	}
 
 	l, _ := s.findNode(toKey, nil)
-	t := &Iterator{
+	t := &iterator{
 		m:           s,
 		restartNode: n,
 		limitNode:   l,

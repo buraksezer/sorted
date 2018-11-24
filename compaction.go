@@ -38,19 +38,19 @@ func (m *SortedMap) compactSkipLists() bool {
 	var total int
 	fresh := m.skiplists[len(m.skiplists)-1]
 	for _, old := range m.skiplists[:len(m.skiplists)-1] {
-		if old.Len() == 0 {
+		if old.len() == 0 {
 			// It will be removed by the garbage collector.
 			break
 		}
-		it := old.NewIterator()
-		for it.Next() {
-			key := it.Key()
-			err := fresh.Set(key, it.Value())
+		it := old.newIterator()
+		for it.next() {
+			key := it.key()
+			err := fresh.set(key, it.value())
 			if err != nil {
 				log.Printf("[ERROR] Failed to compact skiplists: %v", err)
 				return false
 			}
-			old.Delete(key)
+			old.delete(key)
 			total++
 			if total > 100000 {
 				// It's enough. Don't block the instance.
@@ -61,7 +61,7 @@ func (m *SortedMap) compactSkipLists() bool {
 	// Remove empty skiplists. Keep the last table.
 	tmp := []*skipList{m.skiplists[len(m.skiplists)-1]}
 	for _, t := range m.skiplists[:len(m.skiplists)-1] {
-		if t.Len() == 0 {
+		if t.len() == 0 {
 			continue
 		}
 		tmp = append(tmp, t)

@@ -76,14 +76,14 @@ func (m *SortedMap) Set(key, value []byte) error {
 
 	// Get the last value, map only calls Put on the last created table.
 	s := m.skiplists[len(m.skiplists)-1]
-	return s.Set(key, value)
+	return s.set(key, value)
 }
 
 func (m *SortedMap) get(key []byte) ([]byte, error) {
 	// Scan available tables by starting the last added table.
 	for i := len(m.skiplists) - 1; i >= 0; i-- {
 		s := m.skiplists[i]
-		val, err := s.Get(key)
+		val, err := s.get(key)
 		if err == ErrKeyNotFound {
 			continue
 		}
@@ -107,7 +107,7 @@ func (m *SortedMap) del(key []byte) error {
 	// Scan available tables by starting the last added table.
 	for i := len(m.skiplists) - 1; i >= 0; i-- {
 		s := m.skiplists[i]
-		err := s.Delete(key)
+		err := s.delete(key)
 		if err == ErrKeyNotFound {
 			// Try out the other tables.
 			continue
@@ -151,9 +151,9 @@ func (m *SortedMap) Range(fn func(key, value []byte) bool) {
 	for i := len(m.skiplists) - 1; i >= 0; i-- {
 		// FIXME: Range should work with the first skiplist, only.
 		s := m.skiplists[i]
-		it := s.NewIterator()
-		for it.Next() {
-			if !fn(it.Key(), it.Value()) {
+		it := s.newIterator()
+		for it.next() {
+			if !fn(it.key(), it.value()) {
 				break
 			}
 		}
@@ -167,7 +167,7 @@ func (m *SortedMap) Len() int {
 
 	var total int
 	for _, s := range m.skiplists {
-		total += s.Len()
+		total += s.len()
 	}
 	return total
 }
@@ -178,7 +178,7 @@ func (m *SortedMap) Check(key []byte) bool {
 	defer m.mu.RUnlock()
 
 	for _, s := range m.skiplists {
-		if s.Check(key) {
+		if s.check(key) {
 			return true
 		}
 	}
@@ -191,9 +191,9 @@ func (m *SortedMap) SubMap(fromKey, toKey []byte, f func(key, value []byte) bool
 	// TODO: Check keys here.
 	submap := func() {
 		s := m.skiplists[0]
-		it := s.SubMap(fromKey, toKey)
-		for it.Next() {
-			if !f(it.Key(), it.Value()) {
+		it := s.subMap(fromKey, toKey)
+		for it.next() {
+			if !f(it.key(), it.value()) {
 				break
 			}
 		}

@@ -32,7 +32,7 @@ func (m *SortedMapWithScore) Set(key, value []byte, score uint64) error {
 
 	// Get the last value, storage only calls Put on the last created table.
 	s := m.sm.skiplists[len(m.sm.skiplists)-1]
-	err := s.Set(tkey, value)
+	err := s.set(tkey, value)
 	if err != nil {
 		return err
 	}
@@ -114,11 +114,11 @@ func (m *SortedMapWithScore) Range(f func(key, value []byte) bool) {
 	// Scan available tables by starting the last added table.
 	for i := len(m.sm.skiplists) - 1; i >= 0; i-- {
 		s := m.sm.skiplists[i]
-		it := s.NewIterator()
-		for it.Next() {
-			tkey := it.Key()
+		it := s.newIterator()
+		for it.next() {
+			tkey := it.key()
 			// remove score and call user defined function.
-			if !f(tkey[8:], it.Value()) {
+			if !f(tkey[8:], it.value()) {
 				break
 			}
 		}
@@ -137,11 +137,11 @@ func (m *SortedMapWithScore) SubMap(fromScore, toScore uint64, f func(key, value
 	// Scan available tables by starting the last added table.
 	for i := len(m.sm.skiplists) - 1; i >= 0; i-- {
 		s := m.sm.skiplists[i]
-		it := s.SubMap(fs, ts)
-		for it.Next() {
-			tkey := it.Key()
+		it := s.subMap(fs, ts)
+		for it.next() {
+			tkey := it.key()
 			// remove score and call user defined function.
-			if !f(tkey[8:], it.Value()) {
+			if !f(tkey[8:], it.value()) {
 				break
 			}
 		}
