@@ -1,14 +1,28 @@
 # gsorted
 [![GoDoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/buraksezer/gsorted) [![Build Status](https://travis-ci.org/buraksezer/gsorted.svg?branch=master)](https://travis-ci.org/buraksezer/gsorted) [![Coverage](http://gocover.io/_badge/github.com/buraksezer/gsorted)](http://gocover.io/github.com/buraksezer/gsorted) [![Go Report Card](https://goreportcard.com/badge/github.com/buraksezer/gsorted)](https://goreportcard.com/report/github.com/buraksezer/gsorted) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-SortedSet and SortedMap with SkipList for Go.
+SortedSet and SortedMap with [skip list](https://en.wikipedia.org/wiki/Skip_list) for Go.
 
-## WIP
+**Disclaimer:** gsorted has never been used in production before.
 
-This project is a work in progress. The implementation is incomplete. The documentation may be inaccurate.
+## Rationale
+
+I need a GC friendly SortedSet implementation which implements Load/Dump functions and my keys and values are byte slices.
+
+## Features
+
+* Implemented with Skip list,
+* Uses only one byte slice. It's GC friendly,
+* Supports compaction: Frees claimed memory when it's needed,  
+* Supports sorting keys by score,
+* Implements Load/Dump methods to store whole data set or transfer over network.
+
+## Limitations
+
+* Keys and values are byte slices due to its design.
+
+## Usage 
 
 ## Contributions
-Please don't hesitate to fork the project and send a pull request or just e-mail me to ask questions and share ideas.
+Please don't hesitate to fork the project and send a pull request or just e-mail me to ask questions and share ideas.:w
 
-## License
-BSD 3-Clause "New" or "Revised" License, - see LICENSE for more details.

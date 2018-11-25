@@ -137,7 +137,7 @@ func (m *SortedMap) Delete(key []byte) error {
 
 // Range calls f sequentially for each key and value present in the map.
 // If f returns false, range stops the iteration.
-func (m *SortedMap) Range(fn func(key, value []byte) bool) {
+func (m *SortedMap) Range(f func(key, value []byte) bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -155,7 +155,7 @@ func (m *SortedMap) Range(fn func(key, value []byte) bool) {
 			s := m.skiplists[0]
 			it := s.newIterator()
 			for it.next() {
-				if !fn(it.key(), it.value()) {
+				if !f(it.key(), it.value()) {
 					break
 				}
 			}
