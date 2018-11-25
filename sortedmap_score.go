@@ -22,7 +22,8 @@ type Hasher interface {
 	Sum64([]byte) uint64
 }
 
-// SortedMapWithScore is just a SortedMap which supports sort by score instead of keys.
+// SortedMapWithScore is just a SortedMap which supports sort by score instead of keys. Just a wrapper around
+// SortedMap implementation.
 type SortedMapWithScore struct {
 	sm             *SortedMap
 	hash           Hasher
@@ -161,8 +162,8 @@ func (m *SortedMapWithScore) TailMap(fromScore uint64, f func(key, value []byte)
 }
 
 // Close stops background tasks, if any and waits for them until quit.
-func (m *SortedMapWithScore) Close() error {
-	return m.sm.Close()
+func (m *SortedMapWithScore) Close() {
+	m.sm.Close()
 }
 
 // Len returns the length of SortedMap.

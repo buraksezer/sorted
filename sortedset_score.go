@@ -26,8 +26,8 @@ func (s *SortedSetWithScore) Check(key []byte) bool {
 	return s.m.Check(key)
 }
 
-func (s *SortedSetWithScore) Close() error {
-	return s.m.Close()
+func (s *SortedSetWithScore) Close() {
+	s.m.Close()
 }
 
 func (s *SortedSetWithScore) Range(f func(key []byte) bool) {

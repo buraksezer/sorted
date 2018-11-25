@@ -51,11 +51,11 @@ func NewSortedMap(maxGarbageRatio float64) *SortedMap {
 }
 
 // Close stops background tasks and quits.
-func (m *SortedMap) Close() error {
+func (m *SortedMap) Close() {
 	select {
 	case <-m.ctx.Done():
 		// It's already closed.
-		return nil
+		return
 	default:
 	}
 
@@ -63,7 +63,6 @@ func (m *SortedMap) Close() error {
 
 	// Await for table merging processes gets closed.
 	m.wg.Wait()
-	return nil
 }
 
 // Set sets a new key/value pair to the map.

@@ -9,12 +9,7 @@ import (
 
 func BenchmarkSortedMapSet(b *testing.B) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			b.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer m.Close()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -28,12 +23,7 @@ func BenchmarkSortedMapSet(b *testing.B) {
 
 func BenchmarkSortedMapGet(b *testing.B) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			b.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer m.Close()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -59,14 +49,9 @@ func parallelKey(threadID int, counter int) string {
 
 func BenchmarkSortedMapSetParallel(b *testing.B) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			b.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
-	rand.Seed(time.Now().Unix())
+	defer m.Close()
 
+	rand.Seed(time.Now().Unix())
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -86,12 +71,7 @@ func BenchmarkSortedMapSetParallel(b *testing.B) {
 
 func BenchmarkSortedMapGetParallel(b *testing.B) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			b.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer m.Close()
 
 	b.ReportAllocs()
 	b.ResetTimer()

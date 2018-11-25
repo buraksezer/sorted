@@ -4,12 +4,7 @@ import "testing"
 
 func Test_SortedSet(t *testing.T) {
 	ss := NewSortedSet(0)
-	defer func() {
-		err := ss.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer ss.Close()
 
 	keys := []string{}
 	for i := 0; i < 100; i++ {

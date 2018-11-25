@@ -9,12 +9,7 @@ import (
 
 func Test_SortedMapSetWithScore(t *testing.T) {
 	sm := NewSortedMapWithScore(0, nil)
-	defer func() {
-		err := sm.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer sm.Close()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	keys := []string{}
@@ -47,12 +42,7 @@ func Test_SortedMapSetWithScore(t *testing.T) {
 
 func Test_SortedMapWithScoreGet(t *testing.T) {
 	sm := NewSortedMapWithScore(0, nil)
-	defer func() {
-		err := sm.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer sm.Close()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 100; i++ {
@@ -76,12 +66,7 @@ func Test_SortedMapWithScoreGet(t *testing.T) {
 
 func Test_SortedMapWithScoreDelete(t *testing.T) {
 	sm := NewSortedMapWithScore(0, nil)
-	defer func() {
-		err := sm.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer sm.Close()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 100; i++ {
@@ -109,12 +94,7 @@ func Test_SortedMapWithScoreDelete(t *testing.T) {
 
 func Test_SortedMapWithScoreRange(t *testing.T) {
 	sm := NewSortedMapWithScore(0, nil)
-	defer func() {
-		err := sm.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer sm.Close()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	keys := make(map[string]struct{})
@@ -137,12 +117,7 @@ func Test_SortedMapWithScoreRange(t *testing.T) {
 
 func Test_SortedMapWithScoreSubMap(t *testing.T) {
 	sm := NewSortedMapWithScore(0, nil)
-	defer func() {
-		err := sm.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer sm.Close()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	keys := []string{}

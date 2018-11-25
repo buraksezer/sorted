@@ -19,12 +19,7 @@ func bval(i int) []byte {
 
 func Test_SortedMapSet(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	for i := 0; i < 100; i++ {
 		err := j.Set(bkey(i), bval(i))
@@ -36,12 +31,7 @@ func Test_SortedMapSet(t *testing.T) {
 
 func Test_SortedMapGet(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	for i := 0; i < 100; i++ {
 		err := j.Set(bkey(i), bval(i))
@@ -63,12 +53,7 @@ func Test_SortedMapGet(t *testing.T) {
 
 func Test_SortedMapRange(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	keys := []string{}
 	for i := 0; i < 100; i++ {
@@ -92,12 +77,7 @@ func Test_SortedMapRange(t *testing.T) {
 
 func Test_SortedMapDelete(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	for i := 0; i < 100; i++ {
 		err := j.Set(bkey(i), bval(i))
@@ -119,12 +99,7 @@ func Test_SortedMapDelete(t *testing.T) {
 
 func Test_SortedMapCompaction(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	// Current free space is 1MB. Trigger a merge operation.
 	for i := 0; i < 2000; i++ {
@@ -168,12 +143,7 @@ func Test_SortedMapCompaction(t *testing.T) {
 
 func Test_SortedMapLen(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	for i := 0; i < 100; i++ {
 		err := j.Set(bkey(i), bval(i))
@@ -189,12 +159,7 @@ func Test_SortedMapLen(t *testing.T) {
 
 func Test_SortedMapCheck(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
 
 	for i := 0; i < 100; i++ {
 		err := j.Set(bkey(i), bval(i))
@@ -212,12 +177,8 @@ func Test_SortedMapCheck(t *testing.T) {
 
 func Test_SortedMapComparator(t *testing.T) {
 	j := NewSortedMap(0)
-	defer func() {
-		err := j.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer j.Close()
+
 	check := make(map[int]struct{})
 	keys := []string{}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -251,12 +212,7 @@ func Test_SortedMapComparator(t *testing.T) {
 
 func Test_SortedMapSubMap(t *testing.T) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer m.Close()
 
 	for i := 0; i < 100; i++ {
 		err := m.Set(bkey(i), bval(i))
@@ -290,12 +246,7 @@ func Test_SortedMapSubMap(t *testing.T) {
 
 func Test_SortedMapHeadMap(t *testing.T) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer m.Close()
 
 	for i := 0; i < 100; i++ {
 		err := m.Set(bkey(i), bval(i))
@@ -319,12 +270,7 @@ func Test_SortedMapHeadMap(t *testing.T) {
 
 func Test_SortedMapTailMap(t *testing.T) {
 	m := NewSortedMap(0)
-	defer func() {
-		err := m.Close()
-		if err != nil {
-			t.Fatalf("Failed to close storage: %v", err)
-		}
-	}()
+	defer m.Close()
 
 	for i := 0; i < 100; i++ {
 		err := m.Set(bkey(i), bval(i))
