@@ -4,22 +4,44 @@
 
 package gsorted
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"hash/fnv"
+)
+
+type fnv64a struct{}
+
+func (f fnv64a) Sum64(key []byte) uint64 {
+	h := fnv.New64a()
+	h.Write(key)
+	return h.Sum64()
+}
+
+// Hasher is responsible for generating unsigned, 64 bit hash of provided byte slice.
+type Hasher interface {
+	Sum64([]byte) uint64
+}
 
 // SortedMapWithScore is just a SortedMap which supports sort by score instead of keys.
 type SortedMapWithScore struct {
 	sm             *SortedMap
+	hash           Hasher
 	hkeysWithScore map[uint64]uint64
 }
 
 // NewSortedMapWithScore creates and returns a new SortedMapWithScore
-func NewSortedMapWithScore(maxGarbageRatio float64) *SortedMapWithScore {
+func NewSortedMapWithScore(maxGarbageRatio float64, hasher Hasher) *SortedMapWithScore {
+	if hasher == nil {
+		hasher = fnv64a{}
+	}
 	return &SortedMapWithScore{
+		hash:           hasher,
 		sm:             NewSortedMap(maxGarbageRatio),
 		hkeysWithScore: make(map[uint64]uint64),
 	}
 }
 
+// Set sets a new key/value pair to the map.
 func (m *SortedMapWithScore) Set(key, value []byte, score uint64) error {
 	m.sm.mu.Lock()
 	defer m.sm.mu.Unlock()
@@ -37,14 +59,14 @@ func (m *SortedMapWithScore) Set(key, value []byte, score uint64) error {
 		return err
 	}
 
-	hkey := m.sm.hash.Sum64(key)
+	hkey := m.hash.Sum64(key)
 	m.hkeysWithScore[hkey] = score
 	return nil
 }
 
 // GetScore returns the score for given key, if any. Otherwise it returns ErrKeyNotFound.
 func (m *SortedMapWithScore) GetScore(key []byte) (uint64, error) {
-	hkey := m.sm.hash.Sum64(key)
+	hkey := m.hash.Sum64(key)
 	score, ok := m.hkeysWithScore[hkey]
 	if !ok {
 		return 0, ErrKeyNotFound
@@ -57,7 +79,7 @@ func (m *SortedMapWithScore) Get(key []byte) ([]byte, error) {
 	m.sm.mu.RLock()
 	defer m.sm.mu.RUnlock()
 
-	hkey := m.sm.hash.Sum64(key)
+	hkey := m.hash.Sum64(key)
 	score, ok := m.hkeysWithScore[hkey]
 	if !ok {
 		return nil, ErrKeyNotFound
@@ -75,7 +97,7 @@ func (m *SortedMapWithScore) Delete(key []byte) error {
 	m.sm.mu.Lock()
 	defer m.sm.mu.Unlock()
 
-	hkey := m.sm.hash.Sum64(key)
+	hkey := m.hash.Sum64(key)
 	score, ok := m.hkeysWithScore[hkey]
 	if !ok {
 		// Key not found. Just quit.
@@ -93,59 +115,49 @@ func (m *SortedMapWithScore) Delete(key []byte) error {
 	return nil
 }
 
-// Check checks the key without reading its value and returns true, if any.
-func (m *SortedMapWithScore) Check(key []byte) bool {
-	m.sm.mu.RLock()
-	defer m.sm.mu.RUnlock()
-
-	hkey := m.sm.hash.Sum64(key)
-	_, ok := m.hkeysWithScore[hkey]
-	return ok
-}
-
 // Range calls f sequentially for each key and value present in the SortedMap.
-// If f returns false, range stops the iteration. Range may be O(N) with
-// the number of elements in the map even if f returns false after a constant
-// number of calls.
+// If f returns false, range stops the iteration.
 func (m *SortedMapWithScore) Range(f func(key, value []byte) bool) {
 	m.sm.mu.RLock()
 	defer m.sm.mu.RUnlock()
 
-	// Scan available tables by starting the last added table.
-	for i := len(m.sm.skiplists) - 1; i >= 0; i-- {
-		s := m.sm.skiplists[i]
-		it := s.newIterator()
-		for it.next() {
-			tkey := it.key()
-			// remove score and call user defined function.
-			if !f(tkey[8:], it.value()) {
-				break
-			}
-		}
+	fn := func(key, value []byte) bool {
+		// Remove score from key.
+		return f(key[8:], value)
 	}
+	m.sm.Range(fn)
 }
 
-func (m *SortedMapWithScore) SubMap(fromScore, toScore uint64, f func(key, value []byte) bool) {
+// SubMap returns a view of the portion of this map whose keys range from fromKey, inclusive, to toKey, exclusive.
+func (m *SortedMapWithScore) SubMap(fromScore, toScore uint64, f func(key, value []byte) bool) error {
 	m.sm.mu.RLock()
 	defer m.sm.mu.RUnlock()
 
-	fs := make([]byte, 8)
-	binary.BigEndian.PutUint64(fs, fromScore)
-	ts := make([]byte, 8)
-	binary.BigEndian.PutUint64(ts, toScore)
-
-	// Scan available tables by starting the last added table.
-	for i := len(m.sm.skiplists) - 1; i >= 0; i-- {
-		s := m.sm.skiplists[i]
-		it := s.subMap(fs, ts)
-		for it.next() {
-			tkey := it.key()
-			// remove score and call user defined function.
-			if !f(tkey[8:], it.value()) {
-				break
-			}
-		}
+	var fs, ts []byte
+	if fromScore != 0 {
+		fs = make([]byte, 8)
+		binary.BigEndian.PutUint64(fs, fromScore)
 	}
+	if toScore != 0 {
+		ts = make([]byte, 8)
+		binary.BigEndian.PutUint64(ts, toScore)
+	}
+
+	fn := func(key, value []byte) bool {
+		// Remove score from key.
+		return f(key[8:], value)
+	}
+	return m.sm.SubMap(fs, ts, fn)
+}
+
+// HeadMap returns a view of the portion of this map whose keys are strictly less than toKey.
+func (m *SortedMapWithScore) HeadMap(toScore uint64, f func(key, value []byte) bool) error {
+	return m.SubMap(0, toScore, f)
+}
+
+// TailMap returns a view of the portion of this map whose keys are greater than or equal to fromKey.
+func (m *SortedMapWithScore) TailMap(fromScore uint64, f func(key, value []byte) bool) error {
+	return m.SubMap(fromScore, 0, f)
 }
 
 // Close stops background tasks, if any and waits for them until quit.
@@ -156,4 +168,14 @@ func (m *SortedMapWithScore) Close() error {
 // Len returns the length of SortedMap.
 func (m *SortedMapWithScore) Len() int {
 	return m.sm.Len()
+}
+
+// Check checks the key without reading its value and returns true, if any.
+func (m *SortedMapWithScore) Check(key []byte) bool {
+	m.sm.mu.RLock()
+	defer m.sm.mu.RUnlock()
+
+	hkey := m.hash.Sum64(key)
+	_, ok := m.hkeysWithScore[hkey]
+	return ok
 }

@@ -6,7 +6,7 @@ type SortedSetWithScore struct {
 
 func NewSortedSetWithScore(maxGarbageRatio float64) *SortedSetWithScore {
 	return &SortedSetWithScore{
-		m: NewSortedMapWithScore(maxGarbageRatio),
+		m: NewSortedMapWithScore(maxGarbageRatio, nil),
 	}
 }
 

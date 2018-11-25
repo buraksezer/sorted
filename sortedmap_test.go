@@ -265,8 +265,15 @@ func Test_SortedMapSubMap(t *testing.T) {
 		}
 	}
 
+	err := m.SubMap(bkey(20), bkey(10), func(key, value []byte) bool {
+		return true
+	})
+	if err != ErrInvalidRange {
+		t.Fatalf("Expected ErrInvalidRange. Got: %v", err)
+	}
+
 	idx := 10
-	m.SubMap(bkey(10), bkey(20), func(key, value []byte) bool {
+	err = m.SubMap(bkey(10), bkey(20), func(key, value []byte) bool {
 		if !bytes.Equal(key, bkey(idx)) {
 			t.Fatalf("Expected key %s. Got: %s", bkey(idx), string(key))
 		}
@@ -276,6 +283,9 @@ func Test_SortedMapSubMap(t *testing.T) {
 		idx++
 		return true
 	})
+	if err != nil {
+		t.Fatalf("Expected nil. Got: %v", err)
+	}
 }
 
 func Test_SortedMapHeadMap(t *testing.T) {

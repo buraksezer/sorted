@@ -8,7 +8,7 @@ import (
 )
 
 func Test_SortedMapSetWithScore(t *testing.T) {
-	sm := NewSortedMapWithScore(0)
+	sm := NewSortedMapWithScore(0, nil)
 	defer func() {
 		err := sm.Close()
 		if err != nil {
@@ -46,7 +46,7 @@ func Test_SortedMapSetWithScore(t *testing.T) {
 }
 
 func Test_SortedMapWithScoreGet(t *testing.T) {
-	sm := NewSortedMapWithScore(0)
+	sm := NewSortedMapWithScore(0, nil)
 	defer func() {
 		err := sm.Close()
 		if err != nil {
@@ -75,7 +75,7 @@ func Test_SortedMapWithScoreGet(t *testing.T) {
 }
 
 func Test_SortedMapWithScoreDelete(t *testing.T) {
-	sm := NewSortedMapWithScore(0)
+	sm := NewSortedMapWithScore(0, nil)
 	defer func() {
 		err := sm.Close()
 		if err != nil {
@@ -108,7 +108,7 @@ func Test_SortedMapWithScoreDelete(t *testing.T) {
 }
 
 func Test_SortedMapWithScoreRange(t *testing.T) {
-	sm := NewSortedMapWithScore(0)
+	sm := NewSortedMapWithScore(0, nil)
 	defer func() {
 		err := sm.Close()
 		if err != nil {
@@ -136,7 +136,7 @@ func Test_SortedMapWithScoreRange(t *testing.T) {
 }
 
 func Test_SortedMapWithScoreSubMap(t *testing.T) {
-	sm := NewSortedMapWithScore(0)
+	sm := NewSortedMapWithScore(0, nil)
 	defer func() {
 		err := sm.Close()
 		if err != nil {

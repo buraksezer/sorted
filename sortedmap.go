@@ -6,31 +6,27 @@
 package gsorted
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"hash/fnv"
 	"sync"
 	"time"
 )
 
-// ErrKeyNotFound means that given key could not be found in the data structure.
-var ErrKeyNotFound = errors.New("key not found")
+var (
+	// ErrKeyNotFound means that given key could not be found in the data structure.
+	ErrKeyNotFound = errors.New("key not found")
+
+	// ErrInvalidRange means that given range is invalid to iterate: if fromKey is greater than toKey.
+	ErrInvalidRange = errors.New("given range is invalid")
+)
 
 const DefaultMaxGarbageRatio = 0.40
-
-type fnv64a struct{}
-
-func (f fnv64a) Sum64(key []byte) uint64 {
-	h := fnv.New64a()
-	h.Write(key)
-	return h.Sum64()
-}
 
 // SortedMap is a map that provides a total ordering of its elements (elements can be traversed in sorted order of keys).
 type SortedMap struct {
 	mu sync.RWMutex
 
-	hash            fnv64a
 	skiplists       []*skipList
 	maxGarbageRatio float64
 	compacting      bool
@@ -46,7 +42,6 @@ func NewSortedMap(maxGarbageRatio float64) *SortedMap {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &SortedMap{
-		hash:            fnv64a{},
 		maxGarbageRatio: maxGarbageRatio,
 		ctx:             ctx,
 		cancel:          cancel,
@@ -55,6 +50,7 @@ func NewSortedMap(maxGarbageRatio float64) *SortedMap {
 	return m
 }
 
+// Close stops background tasks and quits.
 func (m *SortedMap) Close() error {
 	select {
 	case <-m.ctx.Done():
@@ -70,6 +66,7 @@ func (m *SortedMap) Close() error {
 	return nil
 }
 
+// Set sets a new key/value pair to the map.
 func (m *SortedMap) Set(key, value []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -123,16 +120,16 @@ func (m *SortedMap) del(key []byte) error {
 		if m.compacting {
 			return nil
 		}
+		m.compacting = true
 		ns := newSkipList()
 		m.skiplists = append(m.skiplists, ns)
-		m.compacting = true
 		m.wg.Add(1)
 		go m.compaction()
 	}
 	return nil
 }
 
-// Delete deletes the value for given key. It returns nil if the key doesn't exist.
+// Delete deletes key/value pair from map. It returns nil if the key doesn't exist.
 func (m *SortedMap) Delete(key []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -140,24 +137,36 @@ func (m *SortedMap) Delete(key []byte) error {
 }
 
 // Range calls f sequentially for each key and value present in the map.
-// If f returns false, range stops the iteration. Range may be O(N) with
-// the number of elements in the map even if f returns false after a constant
-// number of calls.
+// If f returns false, range stops the iteration.
 func (m *SortedMap) Range(fn func(key, value []byte) bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Scan available tables by starting the last added table.
-	for i := len(m.skiplists) - 1; i >= 0; i-- {
-		// FIXME: Range should work with the first skiplist, only.
-		s := m.skiplists[i]
-		it := s.newIterator()
-		for it.next() {
-			if !fn(it.key(), it.value()) {
-				break
+	// Compaction may run at background. Wait until it's done.
+	// if compaction is false, we have only one skiplist instance.
+	for {
+		select {
+		case <-time.After(10 * time.Millisecond):
+			m.mu.RLock()
+			// Wait for compaction.
+			if m.compacting {
+				m.mu.RUnlock()
+				continue
 			}
+			s := m.skiplists[0]
+			it := s.newIterator()
+			for it.next() {
+				if !fn(it.key(), it.value()) {
+					break
+				}
+			}
+			m.mu.RUnlock()
+			return
+		case <-m.ctx.Done():
+			return
 		}
 	}
+
 }
 
 // Len returns the key count in this map.
@@ -187,8 +196,10 @@ func (m *SortedMap) Check(key []byte) bool {
 }
 
 // SubMap returns a view of the portion of this map whose keys range from fromKey, inclusive, to toKey, exclusive.
-func (m *SortedMap) SubMap(fromKey, toKey []byte, f func(key, value []byte) bool) {
-	// TODO: Check keys here.
+func (m *SortedMap) SubMap(fromKey, toKey []byte, f func(key, value []byte) bool) error {
+	if bytes.Compare(fromKey, toKey) > 0 {
+		return ErrInvalidRange
+	}
 	submap := func() {
 		s := m.skiplists[0]
 		it := s.subMap(fromKey, toKey)
@@ -199,6 +210,7 @@ func (m *SortedMap) SubMap(fromKey, toKey []byte, f func(key, value []byte) bool
 		}
 	}
 
+	// Compaction may run at background. Wait until it's done.
 	for {
 		select {
 		case <-time.After(10 * time.Millisecond):
@@ -211,9 +223,9 @@ func (m *SortedMap) SubMap(fromKey, toKey []byte, f func(key, value []byte) bool
 			// Run actual SubMap code here.
 			submap()
 			m.mu.RUnlock()
-			return
+			return nil
 		case <-m.ctx.Done():
-			return
+			return nil
 		}
 	}
 }
