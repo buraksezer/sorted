@@ -1,13 +1,13 @@
-# gsorted
-[![GoDoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/buraksezer/gsorted) [![Build Status](https://travis-ci.org/buraksezer/gsorted.svg?branch=master)](https://travis-ci.org/buraksezer/gsorted) [![Coverage](http://gocover.io/_badge/github.com/buraksezer/gsorted)](http://gocover.io/github.com/buraksezer/gsorted) [![Go Report Card](https://goreportcard.com/badge/github.com/buraksezer/gsorted)](https://goreportcard.com/report/github.com/buraksezer/gsorted) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+# sorted
+[![GoDoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/buraksezer/sorted) [![Build Status](https://travis-ci.org/buraksezer/sorted.svg?branch=master)](https://travis-ci.org/buraksezer/sorted) [![Coverage](http://gocover.io/_badge/github.com/buraksezer/sorted)](http://gocover.io/github.com/buraksezer/sorted) [![Go Report Card](https://goreportcard.com/badge/github.com/buraksezer/sorted)](https://goreportcard.com/report/github.com/buraksezer/sorted) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-SortedSet and SortedMap with [skip list](https://en.wikipedia.org/wiki/Skip_list) for Go.
-
-**Disclaimer:** gsorted has never been used in production before.
+SortedSet and SortedMap with [skip list](https://en.wikipedia.org/wiki/Skip_list) for Go. It also supports
+sorting by score.
 
 ## Rationale
 
-I need a GC friendly SortedSet implementation which implements Load/Dump functions and my keys and values are byte slices.
+It's designed to be used in [Olric](https://github.com/buraksezer/olric). I need a GC friendly SortedSet/SortedMap 
+implementation which implements Load/Dump functions and my keys and values are byte slices. 
 
 ## Features
 

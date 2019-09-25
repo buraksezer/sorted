@@ -1,9 +1,9 @@
-// Copyright (c) 2018 Burak Sezer. All rights reserved.
+// Copyright (c) 2018-2019 Burak Sezer. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*Package gsorted provides SortedMap and SortedSet implementations and supports sorting by score.*/
-package gsorted
+/*Package sorted provides SortedMap and SortedSet implementations and supports sorting by score.*/
+package sorted
 
 import (
 	"bytes"
@@ -230,11 +230,11 @@ func (m *SortedMap) SubMap(fromKey, toKey []byte, f func(key, value []byte) bool
 }
 
 // HeadMap returns a view of the portion of this map whose keys are strictly less than toKey.
-func (m *SortedMap) HeadMap(toKey []byte, f func(key, value []byte) bool) {
-	m.SubMap(nil, toKey, f)
+func (m *SortedMap) HeadMap(toKey []byte, f func(key, value []byte) bool) error {
+	return m.SubMap(nil, toKey, f)
 }
 
 // TailMap returns a view of the portion of this map whose keys are greater than or equal to fromKey.
-func (m *SortedMap) TailMap(fromKey []byte, f func(key, value []byte) bool) {
-	m.SubMap(fromKey, nil, f)
+func (m *SortedMap) TailMap(fromKey []byte, f func(key, value []byte) bool) error {
+	return m.SubMap(fromKey, nil, f)
 }
